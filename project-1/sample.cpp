@@ -46,7 +46,7 @@
 
 // title of these windows:
 
-const char *WINDOWTITLE = "CS450 Project #1 -- Riley Rice";
+const char *WINDOWTITLE = "CS450 Project #1 Painted Chair -- Riley Rice";
 const char *GLUITITLE   = "User Interface Window";
 
 // what the glui package defines as true and false:
@@ -181,7 +181,7 @@ const int MS_PER_CYCLE = 10000;		// 10000 milliseconds = 10 seconds
 int		ActiveButton;			// current button that is down
 GLuint	AxesList;				// list to hold the axes
 int		AxesOn;					// != 0 means to draw the axes
-GLuint	BoxList;				// object display list
+GLuint ChairList;
 int		DebugOn;				// != 0 means to print debugging info
 int		DepthCueOn;				// != 0 means to use intensity depth cueing
 int		DepthBufferOn;			// != 0 means to use the z-buffer
@@ -441,6 +441,9 @@ Display( )
 		glCallList( AxesList );
 	}
 
+  // call the draw list for the painted chair
+  glCallList(ChairList);
+
 	// since we are using glScalef( ), be sure the normals get unitized:
 
 	glEnable( GL_NORMALIZE );
@@ -448,14 +451,11 @@ Display( )
 
 	// draw the box object by calling up its display list:
 
-	glCallList( BoxList );
-
 #ifdef DEMO_Z_FIGHTING
 	if( DepthFightingOn != 0 )
 	{
 		glPushMatrix( );
 			glRotatef( 90.f,   0.f, 1.f, 0.f );
-			glCallList( BoxList );
 		glPopMatrix( );
 	}
 #endif
@@ -526,7 +526,7 @@ DoDebugMenu( int id )
 {
 	DebugOn = id;
 
-	glutSetWindow( MainWindow );
+  glutSetWindow( MainWindow );
 	glutPostRedisplay( );
 }
 
@@ -809,6 +809,88 @@ InitGraphics( )
 
 }
 
+// Helper to draw cylinder
+void DrawCylinder(float dx, float dy, float dz, float radius, float height, int numSlices) {
+  float angleStep = 2.0f * F_PI / numSlices;
+  
+  // Bottom cap
+  glBegin(GL_TRIANGLE_FAN);
+  glVertex3f(dx, dy, dz); // Center of the bottom cap
+  for (int i = 0; i <= numSlices; ++i) {
+      float angle = i * angleStep;
+      glVertex3f(dx + radius * cos(angle), dy + radius * sin(angle), dz);
+  }
+  glEnd();
+
+  // Top cap
+  glBegin(GL_TRIANGLE_FAN);
+  glVertex3f(dx, dy, dz + height); // Center of the top cap
+  for (int i = 0; i <= numSlices; ++i) {
+      float angle = i * angleStep;
+      glVertex3f(dx + radius * cos(angle), dy + radius * sin(angle), dz + height);
+  }
+  glEnd();
+
+  // Side surface
+  glBegin(GL_TRIANGLE_STRIP);
+  for (int i = 0; i <= numSlices; ++i) {
+      float angle = i * angleStep;
+      float x = dx + radius * cos(angle);
+      float y = dy + radius * sin(angle);
+      glVertex3f(x, y, dz);      // Bottom vertex
+      glVertex3f(x, y, dz + height);    // Top vertex
+  }
+  glEnd();
+}
+
+// helper to draw box
+void DrawBox(float dx, float dy, float dz, float width, float height, float depth) {
+     // Calculate half dimensions to center the box around the origin
+    float halfWidth = width / 2.0f;
+    float halfHeight = height / 2.0f;
+    float halfDepth = depth / 2.0f;
+
+    // Draw the 6 faces of the box using GL_QUADS
+    glBegin(GL_QUADS);
+    
+    // Front face
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz + halfDepth);
+    
+    // Back face
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz - halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz - halfDepth);
+    
+    // Left face
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz - halfDepth);
+    
+    // Right face
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz - halfDepth);
+    
+    // Top face
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz - halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz - halfDepth);
+    
+    // Bottom face
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz - halfDepth);
+    
+    glEnd(); 
+}
 
 // initialize the display lists that will not change:
 // (a display list is a way to store opengl commands in
@@ -821,64 +903,40 @@ InitLists( )
 	if (DebugOn != 0)
 		fprintf(stderr, "Starting InitLists.\n");
 
-	float dx = BOXSIZE / 2.f;
-	float dy = BOXSIZE / 2.f;
-	float dz = BOXSIZE / 2.f;
 	glutSetWindow( MainWindow );
 
 	// create the object:
 
-	BoxList = glGenLists( 1 );
-	glNewList( BoxList, GL_COMPILE );
+  ChairList = glGenLists(1);
+  glNewList(ChairList, GL_COMPILE);
 
-		glBegin( GL_QUADS );
+    // Give brown color to chair
+    glColor3f(0.6f, 0.3f, 0.f);
 
-			glColor3f( 1., 0., 0. );
+    // Draw the legs
+    DrawCylinder(0.f, 0.f, 0.f, 0.1f, 1.f, 30);
+    DrawCylinder(1.f, 1.f, 0.f, 0.1f, 1.f, 30);
+    DrawCylinder(1.f, 0.f, 0.f, 0.1f, 1.f, 30);
+    DrawCylinder(0.f, 1.f, 0.f, 0.1f, 1.f, 30);
 
-				glNormal3f( 1., 0., 0. );
-					glVertex3f(  dx, -dy,  dz );
-					glVertex3f(  dx, -dy, -dz );
-					glVertex3f(  dx,  dy, -dz );
-					glVertex3f(  dx,  dy,  dz );
+    // Draw Seat
+    glColor3f(0.6f, 0.3f, 0.6f);
+    DrawBox(.5f, .5f, 1.f, 1.25f, 1.25f, .15f);
 
-				glNormal3f(-1., 0., 0.);
-					glVertex3f( -dx, -dy,  dz);
-					glVertex3f( -dx,  dy,  dz );
-					glVertex3f( -dx,  dy, -dz );
-					glVertex3f( -dx, -dy, -dz );
+    // Draw back support
+    glColor3f(0.6f, 0.f, 0.6f);
+    DrawCylinder(1.f, 0.f, 1.f, 0.1f, 1.f, 30);
+    
+    glColor3f(0.f, 0.3f, 0.6f);
+    DrawCylinder(0.f, 0.f, 1.f, 0.1f, 1.f, 30);
+    
+    glColor3f(1.f, 0.3f, 0.f);
+    DrawCylinder(0.5f, 0.f, 1.f, 0.1f, 1.f, 30);
 
-			glColor3f( 0., 1., 0. );
+    glColor3f(0.f, 1.f, 0.f);
+    DrawBox(0.5f, 0.f, 1.99f, 1.2f, .2f, .1f);
 
-				glNormal3f(0., 1., 0.);
-					glVertex3f( -dx,  dy,  dz );
-					glVertex3f(  dx,  dy,  dz );
-					glVertex3f(  dx,  dy, -dz );
-					glVertex3f( -dx,  dy, -dz );
-
-				glNormal3f(0., -1., 0.);
-					glVertex3f( -dx, -dy,  dz);
-					glVertex3f( -dx, -dy, -dz );
-					glVertex3f(  dx, -dy, -dz );
-					glVertex3f(  dx, -dy,  dz );
-
-			glColor3f(0., 0., 1.);
-
-				glNormal3f(0., 0., 1.);
-					glVertex3f(-dx, -dy, dz);
-					glVertex3f( dx, -dy, dz);
-					glVertex3f( dx,  dy, dz);
-					glVertex3f(-dx,  dy, dz);
-
-				glNormal3f(0., 0., -1.);
-					glVertex3f(-dx, -dy, -dz);
-					glVertex3f(-dx,  dy, -dz);
-					glVertex3f( dx,  dy, -dz);
-					glVertex3f( dx, -dy, -dz);
-
-		glEnd( );
-
-	glEndList( );
-
+  glEndList();
 
 	// create the axes:
 
