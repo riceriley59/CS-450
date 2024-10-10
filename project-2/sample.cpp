@@ -1079,15 +1079,15 @@ Keyboard( unsigned char c, int x, int y )
 
 	switch( c )
 	{
-		case 'o':
-		case 'O':
-			NowProjection = ORTHO;
-			break;
-
-		case 'p':
-		case 'P':
-			NowProjection = PERSP;
-			break;
+		// case 'o':
+		// case 'O':
+		// 	NowProjection = ORTHO;
+		// 	break;
+		//
+		// case 'p':
+		// case 'P':
+		// 	NowProjection = PERSP;
+		// 	break;
 
 		case 'q':
 		case 'Q':
