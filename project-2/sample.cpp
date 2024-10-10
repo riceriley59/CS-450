@@ -1,3 +1,4 @@
+#include "freeglut_std.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -22,6 +23,8 @@
 #include <GL/glu.h>
 #endif
 
+#include "heli.550"
+
 #include "glut.h"
 
 
@@ -42,11 +45,11 @@
 //		6. The transformations to be reset
 //		7. The program to quit
 //
-//	Author:			Joe Graphics
+//	Author:		Riley Rice
 
 // title of these windows:
 
-const char *WINDOWTITLE = "OpenGL / GLUT Sample -- Joe Graphics";
+const char *WINDOWTITLE = "CS450 Project #2 Helicopter -- Riley Rice";
 const char *GLUITITLE   = "User Interface Window";
 
 // what the glui package defines as true and false:
@@ -180,8 +183,11 @@ const int MS_PER_CYCLE = 10000;		// 10000 milliseconds = 10 seconds
 
 int		ActiveButton;			// current button that is down
 GLuint	AxesList;				// list to hold the axes
+GLuint  HelicopterList; // list to hold the helicopter
+GLuint  ChairList;      // list to hold the painted chair
+GLuint  BladeList;      // list to hold the helicopter blade
+int   View;           // 0 means inside view 1 means outside view
 int		AxesOn;					// != 0 means to draw the axes
-GLuint	BoxList;				// object display list
 int		DebugOn;				// != 0 means to print debugging info
 int		DepthCueOn;				// != 0 means to use intensity depth cueing
 int		DepthBufferOn;			// != 0 means to use the z-buffer
@@ -194,7 +200,7 @@ int		ShadowsOn;				// != 0 means to turn shadows on
 float	Time;					// used for animation, this has a value between 0. and 1.
 int		Xmouse, Ymouse;			// mouse values
 float	Xrot, Yrot;				// rotation angles in degrees
-
+float BladeAngle = 0.f;
 
 // function prototypes:
 
@@ -207,7 +213,8 @@ void	DoDepthFightingMenu( int );
 void	DoDepthMenu( int );
 void	DoDebugMenu( int );
 void	DoMainMenu( int );
-void	DoProjectMenu( int );
+//void	DoProjectMenu( int );
+void  DoViewMenu(int);
 void	DoRasterString( float, float, float, char * );
 void	DoStrokeString( float, float, float, float, char * );
 float	ElapsedSeconds( );
@@ -342,6 +349,7 @@ Animate( )
 	Time = (float)ms / (float)MS_PER_CYCLE;		// makes the value of Time between 0. and slightly less than 1.
 
 	// for example, if you wanted to spin an object in Display( ), you might call: glRotatef( 360.f*Time,   0., 1., 0. );
+  BladeAngle += 15.f;
 
 	// force a call to Display( ) next time it is convenient:
 
@@ -392,10 +400,10 @@ Display( )
 
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity( );
-	if( NowProjection == ORTHO )
-		glOrtho( -2.f, 2.f,     -2.f, 2.f,     0.1f, 1000.f );
-	else
-		gluPerspective( 70.f, 1.f,	0.1f, 1000.f );
+	//if( NowProjection == ORTHO )
+	//	glOrtho( -2.f, 2.f,     -2.f, 2.f,     0.1f, 1000.f );
+	//else
+  gluPerspective( 70.f, 1.f,	0.1f, 1000.f ); // Only use perspective mode
 
 	// place the objects into the scene:
 
@@ -404,18 +412,28 @@ Display( )
 
 	// set the eye position, look-at position, and up-vector:
 
-	gluLookAt( 0.f, 0.f, 3.f,     0.f, 0.f, 0.f,     0.f, 1.f, 0.f );
+  if(View == 0) { // outside view
 
-	// rotate the scene:
+    // Look at helicopter from outside
 
-	glRotatef( (GLfloat)Yrot, 0.f, 1.f, 0.f );
-	glRotatef( (GLfloat)Xrot, 1.f, 0.f, 0.f );
+    gluLookAt( 20.f, 20.f, 3.f,     0.f, 0.f, 0.f,     0.f, 1.f, 0.f );
 
-	// uniformly scale the scene:
+    // rotate the scene (only if in outside view):
 
-	if( Scale < MINSCALE )
-		Scale = MINSCALE;
-	glScalef( (GLfloat)Scale, (GLfloat)Scale, (GLfloat)Scale );
+    glRotatef( (GLfloat)Yrot, 0.f, 1.f, 0.f );
+    glRotatef( (GLfloat)Xrot, 1.f, 0.f, 0.f );
+
+    // uniformly scale the scene:
+
+    if( Scale < MINSCALE )
+      Scale = MINSCALE;
+    glScalef( (GLfloat)Scale, (GLfloat)Scale, (GLfloat)Scale );
+  } else if (View == 1) { // inside view
+
+    // Look outside helicopter from cockpit
+
+    gluLookAt( -0.4f, 1.8f, -4.9f,     -0.4f, 1.8f, -10.f,     0.f, 1.f, 0.f );
+  }
 
 	// set the fog parameters:
 
@@ -445,20 +463,44 @@ Display( )
 
 	glEnable( GL_NORMALIZE );
 
+  // draw the painted chair by calling up its display list:
+  glPushMatrix();
 
-	// draw the box object by calling up its display list:
+  glTranslatef(0.f, 0.f, -30.f);
+  glRotatef(30.f, 0.f, 1.f, 0.f);
+  glRotatef(270.f, 1.f, 0.f, 0.f);
+  glRotatef(180.f, 0.f, 0.f, 1.f);
+  glScalef(2.5f, 2.5f, 2.5f);
+  glCallList(ChairList);
 
-	glCallList( BoxList );
+  glPopMatrix();
 
-#ifdef DEMO_Z_FIGHTING
-	if( DepthFightingOn != 0 )
-	{
-		glPushMatrix( );
-			glRotatef( 90.f,   0.f, 1.f, 0.f );
-			glCallList( BoxList );
-		glPopMatrix( );
-	}
-#endif
+	// draw the helicopter by calling up its display list:
+  glColor3f(.133f, .545f, .133f);
+	glCallList(HelicopterList);
+
+  glColor3f(.75f, .75f, .75f);
+
+  // draw the helicopter blade by calling up its display list:
+  glPushMatrix();
+
+  glTranslatef(0.f, 2.9f, -2.f);
+  glRotatef(BladeAngle, 0.f, 1.f, 0.f);
+  glRotatef(90.f, 1.f, 0.f, 0.f);
+  glScalef(5.f, 1.f, 1.f);
+  glCallList(BladeList);
+
+  glPopMatrix();
+
+  glPushMatrix();
+
+  glTranslatef(.5f, 2.5f, 9.f);
+  glRotatef(2.f * BladeAngle, 1.f, 0.f, 0.f);
+  glRotatef(90.f, 0.f, 1.f, 0.f);
+  glScalef(3.f, 1.f, 1.f);
+  glCallList(BladeList);
+
+  glPopMatrix();
 
 
 	// draw some gratuitous text that just rotates on top of the scene:
@@ -590,7 +632,14 @@ DoMainMenu( int id )
 	glutPostRedisplay( );
 }
 
+void DoViewMenu(int id) {
+  View = id;
 
+  glutSetWindow(MainWindow);
+  glutPostRedisplay();
+}
+
+/*
 void
 DoProjectMenu( int id )
 {
@@ -599,7 +648,7 @@ DoProjectMenu( int id )
 	glutSetWindow( MainWindow );
 	glutPostRedisplay( );
 }
-
+*/
 
 // use glut to display a string of characters using a raster font:
 
@@ -686,9 +735,13 @@ InitMenus( )
 	glutAddMenuEntry( "Off",  0 );
 	glutAddMenuEntry( "On",   1 );
 
-	int projmenu = glutCreateMenu( DoProjectMenu );
-	glutAddMenuEntry( "Orthographic",  ORTHO );
-	glutAddMenuEntry( "Perspective",   PERSP );
+	//int projmenu = glutCreateMenu( DoProjectMenu );
+	//glutAddMenuEntry( "Orthographic",  ORTHO );
+	//glutAddMenuEntry( "Perspective",   PERSP );
+
+  int viewmenu = glutCreateMenu(DoViewMenu);
+  glutAddMenuEntry("Outside View", 0);
+  glutAddMenuEntry("Inside View", 1);
 
 	int mainmenu = glutCreateMenu( DoMainMenu );
 	glutAddSubMenu(   "Axes",          axesmenu);
@@ -703,7 +756,8 @@ InitMenus( )
 #endif
 
 	glutAddSubMenu(   "Depth Cue",     depthcuemenu);
-	glutAddSubMenu(   "Projection",    projmenu );
+	//glutAddSubMenu(   "Projection",    projmenu );
+  glutAddSubMenu("View", viewmenu);
 	glutAddMenuEntry( "Reset",         RESET );
 	glutAddSubMenu(   "Debug",         debugmenu);
 	glutAddMenuEntry( "Quit",          QUIT );
@@ -809,6 +863,88 @@ InitGraphics( )
 
 }
 
+// Helper to draw cylinder
+void DrawCylinder(float dx, float dy, float dz, float radius, float height, int numSlices) {
+  float angleStep = 2.0f * F_PI / numSlices;
+  
+  // Bottom cap
+  glBegin(GL_TRIANGLE_FAN);
+  glVertex3f(dx, dy, dz); // Center of the bottom cap
+  for (int i = 0; i <= numSlices; ++i) {
+      float angle = i * angleStep;
+      glVertex3f(dx + radius * cos(angle), dy + radius * sin(angle), dz);
+  }
+  glEnd();
+
+  // Top cap
+  glBegin(GL_TRIANGLE_FAN);
+  glVertex3f(dx, dy, dz + height); // Center of the top cap
+  for (int i = 0; i <= numSlices; ++i) {
+      float angle = i * angleStep;
+      glVertex3f(dx + radius * cos(angle), dy + radius * sin(angle), dz + height);
+  }
+  glEnd();
+
+  // Side surface
+  glBegin(GL_TRIANGLE_STRIP);
+  for (int i = 0; i <= numSlices; ++i) {
+      float angle = i * angleStep;
+      float x = dx + radius * cos(angle);
+      float y = dy + radius * sin(angle);
+      glVertex3f(x, y, dz);      // Bottom vertex
+      glVertex3f(x, y, dz + height);    // Top vertex
+  }
+  glEnd();
+}
+
+// helper to draw box
+void DrawBox(float dx, float dy, float dz, float width, float height, float depth) {
+     // Calculate half dimensions to center the box around the origin
+    float halfWidth = width / 2.0f;
+    float halfHeight = height / 2.0f;
+    float halfDepth = depth / 2.0f;
+
+    // Draw the 6 faces of the box using GL_QUADS
+    glBegin(GL_QUADS);
+    
+    // Front face
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz + halfDepth);
+    
+    // Back face
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz - halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz - halfDepth);
+    
+    // Left face
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz - halfDepth);
+    
+    // Right face
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz - halfDepth);
+    
+    // Top face
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz - halfDepth);
+    glVertex3f(dx - halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy + halfHeight, dz - halfDepth);
+    
+    // Bottom face
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz - halfDepth);
+    glVertex3f(dx - halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz + halfDepth);
+    glVertex3f(dx + halfWidth, dy - halfHeight, dz - halfDepth);
+    
+    glEnd(); 
+}
 
 // initialize the display lists that will not change:
 // (a display list is a way to store opengl commands in
@@ -821,64 +957,106 @@ InitLists( )
 	if (DebugOn != 0)
 		fprintf(stderr, "Starting InitLists.\n");
 
-	float dx = BOXSIZE / 2.f;
-	float dy = BOXSIZE / 2.f;
-	float dz = BOXSIZE / 2.f;
 	glutSetWindow( MainWindow );
 
-	// create the object:
+  ChairList = glGenLists(1);
+  glNewList(ChairList, GL_COMPILE);
 
-	BoxList = glGenLists( 1 );
-	glNewList( BoxList, GL_COMPILE );
+    // Give brown color to chair
+    glColor3f(0.6f, 0.3f, 0.f);
 
-		glBegin( GL_QUADS );
+    // Draw the legs
+    DrawCylinder(0.f, 0.f, 0.f, 0.1f, 1.f, 30);
+    DrawCylinder(1.f, 1.f, 0.f, 0.1f, 1.f, 30);
+    DrawCylinder(1.f, 0.f, 0.f, 0.1f, 1.f, 30);
+    DrawCylinder(0.f, 1.f, 0.f, 0.1f, 1.f, 30);
 
-			glColor3f( 1., 0., 0. );
+    // Draw Seat
+    glColor3f(0.6f, 0.3f, 0.6f);
+    DrawBox(.5f, .5f, 1.f, 1.25f, 1.25f, .15f);
 
-				glNormal3f( 1., 0., 0. );
-					glVertex3f(  dx, -dy,  dz );
-					glVertex3f(  dx, -dy, -dz );
-					glVertex3f(  dx,  dy, -dz );
-					glVertex3f(  dx,  dy,  dz );
+    // Draw back support
+    glColor3f(0.6f, 0.f, 0.6f);
+    DrawCylinder(1.f, 0.f, 1.f, 0.1f, 1.f, 30);
+    
+    glColor3f(0.f, 0.3f, 0.6f);
+    DrawCylinder(0.f, 0.f, 1.f, 0.1f, 1.f, 30);
+    
+    glColor3f(1.f, 0.3f, 0.f);
+    DrawCylinder(0.5f, 0.f, 1.f, 0.1f, 1.f, 30);
 
-				glNormal3f(-1., 0., 0.);
-					glVertex3f( -dx, -dy,  dz);
-					glVertex3f( -dx,  dy,  dz );
-					glVertex3f( -dx,  dy, -dz );
-					glVertex3f( -dx, -dy, -dz );
+    glColor3f(0.f, 1.f, 0.f);
+    DrawBox(0.5f, 0.f, 1.99f, 1.2f, .2f, .1f);
 
-			glColor3f( 0., 1., 0. );
+  glEndList();
 
-				glNormal3f(0., 1., 0.);
-					glVertex3f( -dx,  dy,  dz );
-					glVertex3f(  dx,  dy,  dz );
-					glVertex3f(  dx,  dy, -dz );
-					glVertex3f( -dx,  dy, -dz );
+  // create the blade list:
 
-				glNormal3f(0., -1., 0.);
-					glVertex3f( -dx, -dy,  dz);
-					glVertex3f( -dx, -dy, -dz );
-					glVertex3f(  dx, -dy, -dz );
-					glVertex3f(  dx, -dy,  dz );
+  BladeList = glGenLists(1);
+  glNewList(BladeList, GL_COMPILE);
+                        
+    // blade parameters:
 
-			glColor3f(0., 0., 1.);
+#define BLADE_RADIUS		 1.0
+#define BLADE_WIDTH		 0.4
 
-				glNormal3f(0., 0., 1.);
-					glVertex3f(-dx, -dy, dz);
-					glVertex3f( dx, -dy, dz);
-					glVertex3f( dx,  dy, dz);
-					glVertex3f(-dx,  dy, dz);
+    // draw the helicopter blade with radius BLADE_RADIUS and
+    //	width BLADE_WIDTH centered at (0.,0.,0.) in the XY plane
 
-				glNormal3f(0., 0., -1.);
-					glVertex3f(-dx, -dy, -dz);
-					glVertex3f(-dx,  dy, -dz);
-					glVertex3f( dx,  dy, -dz);
-					glVertex3f( dx, -dy, -dz);
+    glBegin( GL_TRIANGLES );
+      glVertex2f(  BLADE_RADIUS,  BLADE_WIDTH/2. );
+      glVertex2f(  0., 0. );
+      glVertex2f(  BLADE_RADIUS, -BLADE_WIDTH/2. );
 
-		glEnd( );
+      glVertex2f( -BLADE_RADIUS, -BLADE_WIDTH/2. );
+      glVertex2f(  0., 0. );
+      glVertex2f( -BLADE_RADIUS,  BLADE_WIDTH/2. );
+    glEnd( );
+  glEndList();
 
-	glEndList( );
+  // create the helicopter list:
+  
+  HelicopterList = glGenLists( 1 );
+  glNewList(HelicopterList, GL_COMPILE);
+    int i;
+    struct point *p0, *p1, *p2;
+    struct tri *tp;
+    float p01[3], p02[3], n[3];
 
+    glPushMatrix( );
+    glTranslatef( 0., -1., 0. );
+    glRotatef(  97.,   0., 1., 0. );
+    glRotatef( -15.,   0., 0., 1. );
+    glBegin( GL_TRIANGLES );
+      for( i=0, tp = Helitris; i < Helintris; i++, tp++ )
+      {
+        p0 = &Helipoints[ tp->p0 ];
+        p1 = &Helipoints[ tp->p1 ];
+        p2 = &Helipoints[ tp->p2 ];
+
+        // fake "lighting" from above:
+
+        p01[0] = p1->x - p0->x;
+        p01[1] = p1->y - p0->y;
+        p01[2] = p1->z - p0->z;
+        p02[0] = p2->x - p0->x;
+        p02[1] = p2->y - p0->y;
+        p02[2] = p2->z - p0->z;
+        Cross( p01, p02, n );
+        Unit( n, n );
+        n[1] = fabs( n[1] );
+        n[1] += .25;
+        if( n[1] > 1. )
+          n[1] = 1.;
+        glColor3f( 0., n[1], 0. );
+
+        glVertex3f( p0->x, p0->y, p0->z );
+        glVertex3f( p1->x, p1->y, p1->z );
+        glVertex3f( p2->x, p2->y, p2->z );
+      }
+    glEnd( );
+    glPopMatrix( );  
+  glEndList();
 
 	// create the axes:
 
@@ -933,6 +1111,10 @@ Keyboard( unsigned char c, int x, int y )
 void
 MouseButton( int button, int state, int x, int y )
 {
+  if(View != 0) {
+    return;
+  }
+
 	int b = 0;			// LEFT, MIDDLE, or RIGHT
 
 	if( DebugOn != 0 )
