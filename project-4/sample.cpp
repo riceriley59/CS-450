@@ -194,6 +194,7 @@ GLuint	AxesList;				// list to hold the axes
 int		AxesOn;					// != 0 means to draw the axes
 GLuint  GridList;       // grid display list 
 GLuint  DinoList;        // dino display list
+GLuint  DogList;        // dog display list
 GLuint  SphereList;     // sphere display list
 int		DebugOn;				// != 0 means to print debugging info
 int		DepthCueOn;				// != 0 means to use intensity depth cueing
@@ -302,6 +303,9 @@ Keytimes lightX, lightY, lightZ;
 
 //dino Keytimes
 Keytimes dinoX, dinoZ, dinoRot;
+
+//dog Keytimes
+Keytimes dogX, dogZ, dogRot;
 
 // eye keytimes
 Keytimes eyeX, eyeY, eyeZ;
@@ -485,6 +489,14 @@ Display( )
     glRotatef(dinoRot.GetValue(nowTime), 0.f, 1.f, 0.f);
     glScalef(.25f, .25f, .25f);
     glCallList(DinoList);
+  glPopMatrix();
+
+  // draw the DogList 
+  glPushMatrix();
+    glTranslatef(dogX.GetValue(nowTime), 0.f, dogZ.GetValue(nowTime));
+    glRotatef(dogRot.GetValue(nowTime), 0.f, 1.f, 0.f);
+    glScalef(.4f, .4f, .4f);
+    glCallList(DogList);
   glPopMatrix();
 
   glDisable(GL_LIGHT0);
@@ -892,6 +904,42 @@ InitGraphics( )
   dinoRot.AddTimeValue(7.5f, 0.f);
   dinoRot.AddTimeValue(8.75f, 90.f);
   dinoRot.AddTimeValue(10.f, -90.f);
+ 
+  // Set up the x positions for the dog
+  dogX.Init();
+  dogX.AddTimeValue(0.f, 3.f);
+  dogX.AddTimeValue(1.25f, 3.f);
+  dogX.AddTimeValue(2.5f, -3.f);
+  dogX.AddTimeValue(3.75f, -3.f);
+  dogX.AddTimeValue(5.f, 3.f);
+  dogX.AddTimeValue(6.25f, 3.f);
+  dogX.AddTimeValue(7.5f, 3.f);
+  dogX.AddTimeValue(8.75f, -3.f);
+  dogX.AddTimeValue(10.f, 3.f);
+
+  // Set up the y positions for the dog
+  dogZ.Init();
+  dogZ.AddTimeValue(0.f, 3.f);
+  dogZ.AddTimeValue(1.25f, -3.f);
+  dogZ.AddTimeValue(2.5f, -3.f);
+  dogZ.AddTimeValue(3.75f, 3.f);
+  dogZ.AddTimeValue(5.f, 3.f);
+  dogZ.AddTimeValue(6.25f, 3.f);
+  dogZ.AddTimeValue(7.5f, -3.f);
+  dogZ.AddTimeValue(8.75f, -3.f);
+  dogZ.AddTimeValue(10.f, 3.f);
+
+  // Set up the rotation for the dog
+  dogRot.Init();
+  dogRot.AddTimeValue(0.f, -90.f);
+  dogRot.AddTimeValue(1.25f, 0.f);
+  dogRot.AddTimeValue(2.5f, 90.f);
+  dogRot.AddTimeValue(3.75f, 180.f);
+  dogRot.AddTimeValue(5.f, 270.f);
+  dogRot.AddTimeValue(6.25f, -90.f);
+  dogRot.AddTimeValue(7.5f, 0.f);
+  dogRot.AddTimeValue(8.75f, 90.f);
+  dogRot.AddTimeValue(10.f, -90.f);
 
   // Set up the x positions for the eye
   eyeX.Init();
@@ -911,7 +959,7 @@ InitGraphics( )
   eyeY.AddTimeValue(1.25f, 8.f);
   eyeY.AddTimeValue(2.5f, 6.f);
   eyeY.AddTimeValue(3.75f, 4.f);
-  eyeY.AddTimeValue(5.f, 2.f);
+  eyeY.AddTimeValue(5.f, 4.f);
   eyeY.AddTimeValue(6.25f, 4.f);
   eyeY.AddTimeValue(7.5f, 6.f);
   eyeY.AddTimeValue(8.75f, 8.f);
@@ -984,6 +1032,12 @@ InitLists( )
   glNewList(DinoList, GL_COMPILE);
     SetMaterial( 0.f, 1.f, 0.f, 100.f );		
     LoadObjFile((char *)"dino.obj");
+  glEndList();
+
+  DogList = glGenLists(1);
+  glNewList(DogList, GL_COMPILE);
+    SetMaterial( 1.f, 0.f, 0.f, 50.f );		
+    LoadObjFile((char *)"dog.obj");
   glEndList();
 
   SphereList = glGenLists(1);
