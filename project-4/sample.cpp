@@ -867,7 +867,7 @@ InitGraphics( )
   dinoX.AddTimeValue(6.25f, -3.f);
   dinoX.AddTimeValue(7.5f, -3.f);
   dinoX.AddTimeValue(8.75f, 3.f);
-  dinoX.AddTimeValue(10.f, 3.f);
+  dinoX.AddTimeValue(10.f, -3.f);
 
   // Set up the y positions for the dino
   dinoZ.Init();
@@ -891,7 +891,7 @@ InitGraphics( )
   dinoRot.AddTimeValue(6.25f, -90.f);
   dinoRot.AddTimeValue(7.5f, 0.f);
   dinoRot.AddTimeValue(8.75f, 90.f);
-  dinoRot.AddTimeValue(10.f, 180.f);
+  dinoRot.AddTimeValue(10.f, -90.f);
 
   // Set up the x positions for the eye
   eyeX.Init();
@@ -903,7 +903,7 @@ InitGraphics( )
   eyeX.AddTimeValue(6.25f, -10.f);
   eyeX.AddTimeValue(7.5f, -10.f);
   eyeX.AddTimeValue(8.75f, 10.f);
-  eyeX.AddTimeValue(10.f, 10.f);
+  eyeX.AddTimeValue(10.f, -10.f);
 
   // Set up the y positions for the eye
   eyeY.Init();
