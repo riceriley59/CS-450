@@ -1,3 +1,4 @@
+#include "freeglut_std.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -42,11 +43,11 @@
 //		6. The transformations to be reset
 //		7. The program to quit
 //
-//	Author:			Joe Graphics
+//	Author:		Riley Rice	
 
 // title of these windows:
 
-const char *WINDOWTITLE = "OpenGL / GLUT Sample -- Joe Graphics";
+const char *WINDOWTITLE = "CS450 Project #4: Keytime Animation -- Riley Rice";
 const char *GLUITITLE   = "User Interface Window";
 
 // what the glui package defines as true and false:
@@ -62,10 +63,6 @@ const int ESCAPE = 0x1b;
 
 const int INIT_WINDOW_SIZE = 600;
 
-// size of the 3d box to be drawn:
-
-const float BOXSIZE = 2.f;
-
 // multiplication factors for input interaction:
 //  (these are known from previous experience)
 
@@ -75,6 +72,8 @@ const float SCLFACT = 0.005f;
 // minimum allowable scale factor:
 
 const float MINSCALE = 0.05f;
+
+const int MSEC = 10000;
 
 // scroll wheel button values:
 
@@ -126,7 +125,7 @@ enum Colors
 	GREEN,
 	CYAN,
 	BLUE,
-	MAGENTA
+	MAGENTA,
 };
 
 char * ColorNames[ ] =
@@ -136,13 +135,13 @@ char * ColorNames[ ] =
 	(char*)"Green",
 	(char*)"Cyan",
 	(char*)"Blue",
-	(char*)"Magenta"
+	(char*)"Magenta",
 };
 
 // the color definitions:
 // this order must match the menu order
 
-const GLfloat Colors[ ][3] = 
+const GLfloat Colors[][3] =
 {
 	{ 1., 0., 0. },		// red
 	{ 1., 1., 0. },		// yellow
@@ -175,22 +174,38 @@ const int MS_PER_CYCLE = 10000;		// 10000 milliseconds = 10 seconds
 //#define DEMO_Z_FIGHTING
 //#define DEMO_DEPTH_BUFFER
 
+// Grid Global Variables
+#define XSIDE	  12.5f			          // length of the x side of the grid
+#define X0      (-XSIDE/2.)		      // where one side starts
+#define NX	    200.f			          // how many points in x
+#define DX	    ( XSIDE/(float)NX ) // change in x between the points
+
+#define YGRID	  0.f			            // y-height of the grid
+
+#define ZSIDE	  12.5f			          // length of the z side of the grid
+#define Z0      (-ZSIDE/2.)		      // where one side starts
+#define NZ	    200.f			          // how many points in z
+#define DZ	    ( ZSIDE/(float)NZ )	// change in z between the points
 
 // non-constant global variables:
 
 int		ActiveButton;			// current button that is down
 GLuint	AxesList;				// list to hold the axes
 int		AxesOn;					// != 0 means to draw the axes
-GLuint	BoxList;				// object display list
+GLuint  GridList;       // grid display list 
+GLuint  DinoList;        // dino display list
+GLuint  SphereList;     // sphere display list
 int		DebugOn;				// != 0 means to print debugging info
 int		DepthCueOn;				// != 0 means to use intensity depth cueing
 int		DepthBufferOn;			// != 0 means to use the z-buffer
 int		DepthFightingOn;		// != 0 means to force the creation of z-fighting
 int		MainWindow;				// window id for main graphics window
 int		NowColor;				// index into Colors[ ]
-int		NowProjection;		// ORTHO or PERSP
+int  SpotLight;      // bool to check whether we do spot light
+int  LightColor;     // Light Color
 float	Scale;					// scaling factor
 int		ShadowsOn;				// != 0 means to turn shadows on
+bool Frozen;         // boolean to control whether to freeze animation
 float	Time;					// used for animation, this has a value between 0. and 1.
 int		Xmouse, Ymouse;			// mouse values
 float	Xrot, Yrot;				// rotation angles in degrees
@@ -207,7 +222,6 @@ void	DoDepthFightingMenu( int );
 void	DoDepthMenu( int );
 void	DoDebugMenu( int );
 void	DoMainMenu( int );
-void	DoProjectMenu( int );
 void	DoRasterString( float, float, float, char * );
 void	DoStrokeString( float, float, float, float, char * );
 float	ElapsedSeconds( );
@@ -273,16 +287,27 @@ MulArray3(float factor, float a, float b, float c )
 
 // these are here for when you need them -- just uncomment the ones you need:
 
-//#include "setmaterial.cpp"
-//#include "setlight.cpp"
-//#include "osusphere.cpp"
+#include "setmaterial.cpp"
+#include "setlight.cpp"
+#include "osusphere.cpp"
 //#include "osucone.cpp"
 //#include "osutorus.cpp"
 //#include "bmptotexture.cpp"
-//#include "loadobjfile.cpp"
-//#include "keytime.cpp"
+#include "loadobjfile.cpp"
+#include "keytime.cpp"
 //#include "glslprogram.cpp"
 
+//light keytimes
+Keytimes lightX, lightY, lightZ;
+
+//dino Keytimes
+Keytimes dinoX, dinoZ, dinoRot;
+
+// eye keytimes
+Keytimes eyeX, eyeY, eyeZ;
+
+// color Keytimes
+Keytimes color1, color2, color3;
 
 // main program:
 
@@ -335,14 +360,6 @@ main( int argc, char *argv[ ] )
 void
 Animate( )
 {
-	// put animation stuff in here -- change some global variables for Display( ) to find:
-
-	int ms = glutGet(GLUT_ELAPSED_TIME);
-	ms %= MS_PER_CYCLE;							// makes the value of ms between 0 and MS_PER_CYCLE-1
-	Time = (float)ms / (float)MS_PER_CYCLE;		// makes the value of Time between 0. and slightly less than 1.
-
-	// for example, if you wanted to spin an object in Display( ), you might call: glRotatef( 360.f*Time,   0., 1., 0. );
-
 	// force a call to Display( ) next time it is convenient:
 
 	glutSetWindow( MainWindow );
@@ -365,7 +382,6 @@ Display( )
 	glDrawBuffer( GL_BACK );
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	glEnable( GL_DEPTH_TEST );
 #ifdef DEMO_DEPTH_BUFFER
 	if( DepthBufferOn == 0 )
 		glDisable( GL_DEPTH_TEST );
@@ -392,19 +408,19 @@ Display( )
 
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity( );
-	if( NowProjection == ORTHO )
-		glOrtho( -2.f, 2.f,     -2.f, 2.f,     0.1f, 1000.f );
-	else
-		gluPerspective( 70.f, 1.f,	0.1f, 1000.f );
+  gluPerspective( 70.f, 1.f,	0.1f, 1000.f );
 
 	// place the objects into the scene:
 
 	glMatrixMode( GL_MODELVIEW );
 	glLoadIdentity( );
 
+  int msec = glutGet(GLUT_ELAPSED_TIME) % MSEC;
+  float nowTime = (float)msec / 1000.;
+
 	// set the eye position, look-at position, and up-vector:
 
-	gluLookAt( 0.f, 0.f, 3.f,     0.f, 0.f, 0.f,     0.f, 1.f, 0.f );
+	gluLookAt( eyeX.GetValue(nowTime), eyeY.GetValue(nowTime), eyeZ.GetValue(nowTime),     0.f, 0.f, 0.f,     0.f, 1.f, 0.f );
 
 	// rotate the scene:
 
@@ -433,33 +449,46 @@ Display( )
 		glDisable( GL_FOG );
 	}
 
+  glDisable(GL_LIGHTING);
+
 	// possibly draw the axes:
 
 	if( AxesOn != 0 )
-	{
-		glColor3fv( &Colors[NowColor][0] );
+	{ 
+    glColor3fv( &Colors[NowColor][0] );
 		glCallList( AxesList );
 	}
+
+  glPushMatrix();
+    glTranslatef(lightX.GetValue(nowTime), lightY.GetValue(nowTime), lightZ.GetValue(nowTime));
+    glScalef(0.5f, 0.5f, 0.5f);
+    glColor3f(color1.GetValue(nowTime), color2.GetValue(nowTime), color3.GetValue(nowTime));
+    glCallList(SphereList);
+  glPopMatrix();
 
 	// since we are using glScalef( ), be sure the normals get unitized:
 
 	glEnable( GL_NORMALIZE );
 
+	glEnable( GL_DEPTH_TEST );
+  glEnable(GL_LIGHTING);
 
-	// draw the box object by calling up its display list:
+  glEnable(GL_LIGHT0);
+  SetPointLight(GL_LIGHT0, lightX.GetValue(nowTime), lightY.GetValue(nowTime), lightZ.GetValue(nowTime), color1.GetValue(nowTime), color2.GetValue(nowTime), color3.GetValue(nowTime));
 
-	glCallList( BoxList );
+  // draw the GridList 
+  glCallList(GridList);
 
-#ifdef DEMO_Z_FIGHTING
-	if( DepthFightingOn != 0 )
-	{
-		glPushMatrix( );
-			glRotatef( 90.f,   0.f, 1.f, 0.f );
-			glCallList( BoxList );
-		glPopMatrix( );
-	}
-#endif
+  // draw the DinoList
+  glPushMatrix();
+    glTranslatef(dinoX.GetValue(nowTime), 1.f, dinoZ.GetValue(nowTime));
+    glRotatef(dinoRot.GetValue(nowTime), 0.f, 1.f, 0.f);
+    glScalef(.25f, .25f, .25f);
+    glCallList(DinoList);
+  glPopMatrix();
 
+  glDisable(GL_LIGHT0);
+  glDisable(GL_LIGHTING);
 
 	// draw some gratuitous text that just rotates on top of the scene:
 	// i commented out the actual text-drawing calls -- put them back in if you have a use for them
@@ -591,16 +620,6 @@ DoMainMenu( int id )
 }
 
 
-void
-DoProjectMenu( int id )
-{
-	NowProjection = id;
-
-	glutSetWindow( MainWindow );
-	glutPostRedisplay( );
-}
-
-
 // use glut to display a string of characters using a raster font:
 
 void
@@ -686,10 +705,6 @@ InitMenus( )
 	glutAddMenuEntry( "Off",  0 );
 	glutAddMenuEntry( "On",   1 );
 
-	int projmenu = glutCreateMenu( DoProjectMenu );
-	glutAddMenuEntry( "Orthographic",  ORTHO );
-	glutAddMenuEntry( "Perspective",   PERSP );
-
 	int mainmenu = glutCreateMenu( DoMainMenu );
 	glutAddSubMenu(   "Axes",          axesmenu);
 	glutAddSubMenu(   "Axis Colors",   colormenu);
@@ -703,7 +718,6 @@ InitMenus( )
 #endif
 
 	glutAddSubMenu(   "Depth Cue",     depthcuemenu);
-	glutAddSubMenu(   "Projection",    projmenu );
 	glutAddMenuEntry( "Reset",         RESET );
 	glutAddSubMenu(   "Debug",         debugmenu);
 	glutAddMenuEntry( "Quit",          QUIT );
@@ -807,6 +821,149 @@ InitGraphics( )
 
 	// all other setups go here, such as GLSLProgram and KeyTime setups:
 
+  // Set up the x positions for the light
+  lightX.Init();
+  lightX.AddTimeValue(0.f, 10.f * cos(2 * F_PI));
+  lightX.AddTimeValue(1.25f, 10.f * cos(0.25f * F_PI));
+  lightX.AddTimeValue(2.5f, 10.f * cos(0.5f * F_PI));
+  lightX.AddTimeValue(3.75f, 10.f * cos(0.75f * F_PI));
+  lightX.AddTimeValue(5.f, 10.f * cos(F_PI));
+  lightX.AddTimeValue(6.25f, 10.f * cos(1.25f * F_PI));
+  lightX.AddTimeValue(7.5f, 10.f * cos(1.5f * F_PI));
+  lightX.AddTimeValue(8.75f, 10.f * cos(1.75f * F_PI));
+  lightX.AddTimeValue(10.f, 10.f * cos(2 * F_PI));
+
+  // Set up the y positions for the light
+  lightY.Init();
+  lightY.AddTimeValue(0.f, 10.f);
+  lightY.AddTimeValue(1.25f, 8.f);
+  lightY.AddTimeValue(2.5f, 6.f);
+  lightY.AddTimeValue(3.75f, 4.f);
+  lightY.AddTimeValue(5.f, 2.f);
+  lightY.AddTimeValue(6.25f, 4.f);
+  lightY.AddTimeValue(7.5f, 6.f);
+  lightY.AddTimeValue(8.75f, 8.f);
+  lightY.AddTimeValue(10.f, 10.f);
+
+  // Set up the z positions for the light
+  lightZ.Init();
+  lightZ.AddTimeValue(0.f, 10.f * sin(2 * F_PI));
+  lightZ.AddTimeValue(1.25f, 10.f * sin(0.25f * F_PI));
+  lightZ.AddTimeValue(2.5f, 10.f * sin(0.5f * F_PI));
+  lightZ.AddTimeValue(3.75f, 10.f * sin(0.75f * F_PI));
+  lightZ.AddTimeValue(5.f, 10.f * sin(F_PI));
+  lightZ.AddTimeValue(6.25f, 10.f * sin(1.25f * F_PI));
+  lightZ.AddTimeValue(7.5f, 10.f * sin(1.5f * F_PI));
+  lightZ.AddTimeValue(8.75f, 10.f * sin(1.75f * F_PI));
+  lightZ.AddTimeValue(10.f, 10.f * sin(2 * F_PI));
+
+  // Set up the x positions for the dino
+  dinoX.Init();
+  dinoX.AddTimeValue(0.f, -3.f);
+  dinoX.AddTimeValue(1.25f, -3.f);
+  dinoX.AddTimeValue(2.5f, 3.f);
+  dinoX.AddTimeValue(3.75f, 3.f);
+  dinoX.AddTimeValue(5.f, -3.f);
+  dinoX.AddTimeValue(6.25f, -3.f);
+  dinoX.AddTimeValue(7.5f, -3.f);
+  dinoX.AddTimeValue(8.75f, 3.f);
+  dinoX.AddTimeValue(10.f, 3.f);
+
+  // Set up the y positions for the dino
+  dinoZ.Init();
+  dinoZ.AddTimeValue(0.f, -3.f);
+  dinoZ.AddTimeValue(1.25f, 3.f);
+  dinoZ.AddTimeValue(2.5f, 3.f);
+  dinoZ.AddTimeValue(3.75f, -3.f);
+  dinoZ.AddTimeValue(5.f, -3.f);
+  dinoZ.AddTimeValue(6.25f, -3.f);
+  dinoZ.AddTimeValue(7.5f, 3.f);
+  dinoZ.AddTimeValue(8.75f, 3.f);
+  dinoZ.AddTimeValue(10.f, -3.f);
+
+  // Set up the rotation for the dino
+  dinoRot.Init();
+  dinoRot.AddTimeValue(0.f, -90.f);
+  dinoRot.AddTimeValue(1.25f, 0.f);
+  dinoRot.AddTimeValue(2.5f, 90.f);
+  dinoRot.AddTimeValue(3.75f, 180.f);
+  dinoRot.AddTimeValue(5.f, 270.f);
+  dinoRot.AddTimeValue(6.25f, -90.f);
+  dinoRot.AddTimeValue(7.5f, 0.f);
+  dinoRot.AddTimeValue(8.75f, 90.f);
+  dinoRot.AddTimeValue(10.f, 180.f);
+
+  // Set up the x positions for the eye
+  eyeX.Init();
+  eyeX.AddTimeValue(0.f, -10.f);
+  eyeX.AddTimeValue(1.25f, -10.f);
+  eyeX.AddTimeValue(2.5f, 10.f);
+  eyeX.AddTimeValue(3.75f, 10.f);
+  eyeX.AddTimeValue(5.f, -10.f);
+  eyeX.AddTimeValue(6.25f, -10.f);
+  eyeX.AddTimeValue(7.5f, -10.f);
+  eyeX.AddTimeValue(8.75f, 10.f);
+  eyeX.AddTimeValue(10.f, 10.f);
+
+  // Set up the y positions for the eye
+  eyeY.Init();
+  eyeY.AddTimeValue(0.f, 10.f);
+  eyeY.AddTimeValue(1.25f, 8.f);
+  eyeY.AddTimeValue(2.5f, 6.f);
+  eyeY.AddTimeValue(3.75f, 4.f);
+  eyeY.AddTimeValue(5.f, 2.f);
+  eyeY.AddTimeValue(6.25f, 4.f);
+  eyeY.AddTimeValue(7.5f, 6.f);
+  eyeY.AddTimeValue(8.75f, 8.f);
+  eyeY.AddTimeValue(10.f, 10.f);
+
+  // Set up the z positions for the eye
+  eyeZ.Init();
+  eyeZ.AddTimeValue(0.f, -10.f);
+  eyeZ.AddTimeValue(1.25f, 10.f);
+  eyeZ.AddTimeValue(2.5f, 10.f);
+  eyeZ.AddTimeValue(3.75f, -10.f);
+  eyeZ.AddTimeValue(5.f, -10.f);
+  eyeZ.AddTimeValue(6.25f, -10.f);
+  eyeZ.AddTimeValue(7.5f, 10.f);
+  eyeZ.AddTimeValue(8.75f, 10.f);
+  eyeZ.AddTimeValue(10.f, -10.f);
+
+  // Set up the first color for the light
+  color1.Init();
+  color1.AddTimeValue(0.f, 0.f);
+  color1.AddTimeValue(1.25f, 1.f);
+  color1.AddTimeValue(2.5f, 1.f);
+  color1.AddTimeValue(3.75f, 1.f);
+  color1.AddTimeValue(5.f, 0.f);
+  color1.AddTimeValue(6.25f, 1.f);
+  color1.AddTimeValue(7.5f, 0.f);
+  color1.AddTimeValue(8.75f, 1.f);
+  color1.AddTimeValue(10.f, 0.f);
+
+  // Set up the second color for the light
+  color2.Init();
+  color2.AddTimeValue(0.f, 1.f);
+  color2.AddTimeValue(1.25f, 0.f);
+  color2.AddTimeValue(2.5f, 1.f);
+  color2.AddTimeValue(3.75f, 0.f);
+  color2.AddTimeValue(5.f, 1.f);
+  color2.AddTimeValue(6.25f, 0.f);
+  color2.AddTimeValue(7.5f, 1.f);
+  color2.AddTimeValue(8.75f, 0.f);
+  color2.AddTimeValue(10.f, 1.f);
+
+  // Set up the third color for the light
+  color3.Init();
+  color3.AddTimeValue(0.f, 0.f);
+  color3.AddTimeValue(1.25f, 1.f);
+  color3.AddTimeValue(2.5f, 0.f);
+  color3.AddTimeValue(3.75f, 1.f);
+  color3.AddTimeValue(5.f, 0.f);
+  color3.AddTimeValue(6.25f, 1.f);
+  color3.AddTimeValue(7.5f, 0.f);
+  color3.AddTimeValue(8.75f, 1.f);
+  color3.AddTimeValue(10.f, 0.f);
 }
 
 
@@ -821,69 +978,42 @@ InitLists( )
 	if (DebugOn != 0)
 		fprintf(stderr, "Starting InitLists.\n");
 
-	float dx = BOXSIZE / 2.f;
-	float dy = BOXSIZE / 2.f;
-	float dz = BOXSIZE / 2.f;
 	glutSetWindow( MainWindow );
 
-	// create the object:
+  DinoList = glGenLists(1);
+  glNewList(DinoList, GL_COMPILE);
+    SetMaterial( 0.f, 1.f, 0.f, 100.f );		
+    LoadObjFile((char *)"dino.obj");
+  glEndList();
 
-	BoxList = glGenLists( 1 );
-	glNewList( BoxList, GL_COMPILE );
+  SphereList = glGenLists(1);
+  glNewList(SphereList, GL_COMPILE);
+    OsuSphere(1.f, 40, 40);
+  glEndList();
 
-		glBegin( GL_QUADS );
-
-			glColor3f( 1., 0., 0. );
-
-				glNormal3f( 1., 0., 0. );
-					glVertex3f(  dx, -dy,  dz );
-					glVertex3f(  dx, -dy, -dz );
-					glVertex3f(  dx,  dy, -dz );
-					glVertex3f(  dx,  dy,  dz );
-
-				glNormal3f(-1., 0., 0.);
-					glVertex3f( -dx, -dy,  dz);
-					glVertex3f( -dx,  dy,  dz );
-					glVertex3f( -dx,  dy, -dz );
-					glVertex3f( -dx, -dy, -dz );
-
-			glColor3f( 0., 1., 0. );
-
-				glNormal3f(0., 1., 0.);
-					glVertex3f( -dx,  dy,  dz );
-					glVertex3f(  dx,  dy,  dz );
-					glVertex3f(  dx,  dy, -dz );
-					glVertex3f( -dx,  dy, -dz );
-
-				glNormal3f(0., -1., 0.);
-					glVertex3f( -dx, -dy,  dz);
-					glVertex3f( -dx, -dy, -dz );
-					glVertex3f(  dx, -dy, -dz );
-					glVertex3f(  dx, -dy,  dz );
-
-			glColor3f(0., 0., 1.);
-
-				glNormal3f(0., 0., 1.);
-					glVertex3f(-dx, -dy, dz);
-					glVertex3f( dx, -dy, dz);
-					glVertex3f( dx,  dy, dz);
-					glVertex3f(-dx,  dy, dz);
-
-				glNormal3f(0., 0., -1.);
-					glVertex3f(-dx, -dy, -dz);
-					glVertex3f(-dx,  dy, -dz);
-					glVertex3f( dx,  dy, -dz);
-					glVertex3f( dx, -dy, -dz);
-
-		glEnd( );
-
-	glEndList( );
+	// create the grid: 
+  GridList = glGenLists( 1 );
+  glNewList( GridList, GL_COMPILE );
+        SetMaterial(0.5f, 0.5f, 0.5f, 10.f);		
+        glNormal3f( 0., 1., 0. );
+        for( int i = 0; i < NZ; i++ )
+        {
+                glBegin( GL_QUAD_STRIP );
+                for( int j = 0; j < NX; j++ )
+                {
+                        glVertex3f( X0 + DX*(float)j, YGRID, Z0 + DZ*(float)(i+0) );
+                        glVertex3f( X0 + DX*(float)j, YGRID, Z0 + DZ*(float)(i+1) );
+                }
+                glEnd( );
+        }
+  glEndList( );
 
 
 	// create the axes:
 
 	AxesList = glGenLists( 1 );
 	glNewList( AxesList, GL_COMPILE );
+    SetMaterial( 1.f, 1.f, 0.f, 0.f );		
 		glLineWidth( AXES_WIDTH );
 			Axes( 1.5 );
 		glLineWidth( 1. );
@@ -901,21 +1031,29 @@ Keyboard( unsigned char c, int x, int y )
 
 	switch( c )
 	{
-		case 'o':
-		case 'O':
-			NowProjection = ORTHO;
-			break;
-
-		case 'p':
-		case 'P':
-			NowProjection = PERSP;
-			break;
+    case 'f':
+    case 'F':
+      Frozen = !Frozen;
+      if (Frozen) {
+        glutIdleFunc(NULL);
+      } else {
+        glutIdleFunc(Animate);
+      }
+      break;
 
 		case 'q':
 		case 'Q':
 		case ESCAPE:
 			DoMainMenu( QUIT );	// will not return here
 			break;				// happy compiler
+
+    case '+':
+			Scale += SCLFACT * SCROLL_WHEEL_CLICK_FACTOR;
+      break;
+
+    case '-':
+			Scale -= SCLFACT * SCROLL_WHEEL_CLICK_FACTOR;
+      break;
 
 		default:
 			fprintf( stderr, "Don't know what to do with keyboard hit: '%c' (0x%0x)\n", c, c );
@@ -1031,6 +1169,9 @@ Reset( )
 {
 	ActiveButton = 0;
 	AxesOn = 1;
+  SpotLight = 0;
+  LightColor = 6;
+  Frozen = false;
 	DebugOn = 0;
 	DepthBufferOn = 1;
 	DepthFightingOn = 0;
@@ -1038,7 +1179,6 @@ Reset( )
 	Scale  = 1.0;
 	ShadowsOn = 0;
 	NowColor = YELLOW;
-	NowProjection = PERSP;
 	Xrot = Yrot = 0.;
 }
 
