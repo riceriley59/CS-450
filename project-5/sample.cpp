@@ -1153,7 +1153,7 @@ Reset( )
 	Scale  = 1.0;
 	ShadowsOn = 0;
 	NowColor = YELLOW;
-  NowProjection = PERSP;
+  NowProjection = ORTHO;
 	Xrot = Yrot = 0.;
 }
 
