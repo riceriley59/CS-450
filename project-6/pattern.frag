@@ -21,8 +21,13 @@ main( )
 	vec3 myColor = SALMON;
 	float ds = vST.s - 0.91;
 	float dt = vST.t - 0.65;
-  float r = 0.1;
-	if( ds <= r && dt <= r ) {
+  float radius = 0.04;
+
+  float dsSquared = ds * ds;
+  float dtSquared = dt * dt;
+  float radiusSquared = radius * radius;
+
+	if(dsSquared + dtSquared <= radiusSquared) {
 		myColor = EYE;
 	}
 

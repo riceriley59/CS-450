@@ -448,13 +448,6 @@ Display( )
 
 	glEnable( GL_NORMALIZE );
 
-  glEnable(GL_LIGHTING);
-  glEnable(GL_LIGHT0);
-  glEnable(GL_LIGHT1);
-
-  SetPointLight(GL_LIGHT0, 14.f, 4.f, 14.f, 1.f, 1.f, 1.f);
-  SetPointLight(GL_LIGHT1, -14.f, 4.f, -14.f, 1.f, 1.f, 1.f);
-
   Pattern.Use();
   
   // Uniforms for fragment shader
@@ -465,8 +458,8 @@ Display( )
   
   // Uniforms for vertex shader
   Pattern.SetUniformVariable((char *)"uTime", Time);
-  Pattern.SetUniformVariable((char *)"uSwimAmp", 1.f);
-  Pattern.SetUniformVariable((char *)"uSwimFreq", 1.f);
+  Pattern.SetUniformVariable((char *)"uSwimAmp", 0.8f);
+  Pattern.SetUniformVariable((char *)"uSwimFreq", 3.f);
 
 	// draw the salmon by calling up its display list:
   glPushMatrix();
@@ -475,11 +468,6 @@ Display( )
   glPopMatrix();
 
   Pattern.UnUse();
-
-  glDisable(GL_LIGHT0);
-  glDisable(GL_LIGHT1);
-  glDisable(GL_LIGHTING);
-
 
 	// draw some gratuitous text that just rotates on top of the scene:
 	// i commented out the actual text-drawing calls -- put them back in if you have a use for them
@@ -865,7 +853,7 @@ InitLists( )
   SalmonList = glGenLists( 1 );
   glNewList(SalmonList, GL_COMPILE);
     SetMaterial(0.98f, 0.50f, 0.45f, 75.f);
-    LoadObjFile((char*) "salmon.obj");
+    LoadObjFile((char*) "salmon_high.obj");
   glEndList();
 
 	// create the axes:

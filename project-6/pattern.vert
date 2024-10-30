@@ -7,7 +7,7 @@ varying  vec3  	vN;		// normal vector
 varying  vec3  	vL;		// vector from point to light
 varying  vec3  	vE;		// vector from point to eye
 
-const vec3 	LIGHTPOS 	= vec3(  10., 10., 5. );
+const vec3 	LIGHTPOS 	= vec3(  10., 10., 10. );
   
 const float 	PI 		= 3.14159265;
 const float	TWOPI 		= 2.*PI;
@@ -18,7 +18,7 @@ main( )
 { 
 	vST = gl_MultiTexCoord0.st;
 	vec3 vert = gl_Vertex.xyz;
-  vert.x += uSwimAmp * sin((TWOPI * uSwimFreq * uTime) + (TWOPI * vert.x / LENGTHZ));
+  vert.x += uSwimAmp * sin((TWOPI * uSwimFreq * uTime) + (TWOPI * vST.x) / LENGTHZ);
 
 
 	vec4 ECposition = gl_ModelViewMatrix * vec4( vert, 1. );
