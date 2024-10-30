@@ -827,7 +827,7 @@ InitGraphics( )
 	// all other setups go here, such as GLSLProgram and KeyTime setups:
 
   Pattern.Init();
-  bool valid = Pattern.Create("pattern.vert", "pattern.frag");
+  bool valid = Pattern.Create((char*)"pattern.vert", (char*)"pattern.frag");
   if (!valid) {
     fprintf(stderr, "Shader didn't compile.");
   } else {

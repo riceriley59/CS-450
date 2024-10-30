@@ -262,14 +262,14 @@ struct planet {
 
 struct planet Planets[] =
 {
-        { "Venus",      "venus.bmp",     0.95f, 0, 'v', 0 },
-        { "Earth",      "earth.bmp",     1.00f, 0, 'e', 0 },
-        { "Moon",       "moon.bmp",      0.27f, 0, 'm', 0 },
-        { "Jupiter",    "jupiter.bmp",  11.21f, 0, 'j', 0 },
-        { "Saturn",     "saturn.bmp",    9.45f, 0, 's', 0 },
-        { "Uranus",     "uranus.bmp",    4.01f, 0, 'u', 0 },
-        { "Neptune",    "neptune.bmp",   3.88f, 0, 'n', 0 },
-        { "Pluto",      "pluto.bmp",     0.19f, 0, 'p', 0 },
+        { (char*)"Venus",      (char*)"venus.bmp",     0.95f, 0, 'v', 0 },
+        { (char*)"Earth",      (char*)"earth.bmp",     1.00f, 0, 'e', 0 },
+        { (char*)"Moon",       (char*)"moon.bmp",      0.27f, 0, 'm', 0 },
+        { (char*)"Jupiter",    (char*)"jupiter.bmp",  11.21f, 0, 'j', 0 },
+        { (char*)"Saturn",     (char*)"saturn.bmp",    9.45f, 0, 's', 0 },
+        { (char*)"Uranus",     (char*)"uranus.bmp",    4.01f, 0, 'u', 0 },
+        { (char*)"Neptune",    (char*)"neptune.bmp",   3.88f, 0, 'n', 0 },
+        { (char*)"Pluto",      (char*)"pluto.bmp",     0.19f, 0, 'p', 0 },
 };
 
 Planet CurrPlanet;
