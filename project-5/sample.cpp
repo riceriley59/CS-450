@@ -483,7 +483,7 @@ Display( )
 	}
 
   float lightX = 20.f * cos(lightRotation);
-  float lightY = 1.f;
+  float lightY = 0.f;
   float lightZ = 20.f * sin(lightRotation);
 
   glPushMatrix();
@@ -493,7 +493,7 @@ Display( )
   glPopMatrix();
 
   glPushMatrix();
-    glTranslatef(-lightX, -lightY, -lightZ);
+    glTranslatef(-lightX, lightY, -lightZ);
     glScalef(0.5f, 0.5f, 0.5f);
     glCallList(SphereList);
   glPopMatrix();
@@ -508,7 +508,7 @@ Display( )
   glEnable(GL_LIGHT1);
 
   SetPointLight(GL_LIGHT0, lightX, lightY, lightZ, 1.f, 1.f, 1.f);
-  SetPointLight(GL_LIGHT1, -lightX, -lightY, -lightZ, 1.f, 1.f, 1.f);
+  SetPointLight(GL_LIGHT1, -lightX, lightY, -lightZ, 1.f, 1.f, 1.f);
 
   switch (TextureMode) {
     case 0: // Texture with GL_MODULATE
