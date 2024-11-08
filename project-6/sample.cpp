@@ -198,6 +198,7 @@ int		ShadowsOn;				// != 0 means to turn shadows on
 float	Time;					// used for animation, this has a value between 0. and 1.
 int		Xmouse, Ymouse;			// mouse values
 float	Xrot, Yrot;				// rotation angles in degrees
+float uSwimAmp, uSwimFreq; // variables for controlling swimming of salmon
 
 // function prototypes:
 
@@ -458,8 +459,8 @@ Display( )
   
   // Uniforms for vertex shader
   Pattern.SetUniformVariable((char *)"uTime", Time);
-  Pattern.SetUniformVariable((char *)"uSwimAmp", 0.8f);
-  Pattern.SetUniformVariable((char *)"uSwimFreq", 3.f);
+  Pattern.SetUniformVariable((char *)"uSwimAmp", uSwimAmp);
+  Pattern.SetUniformVariable((char *)"uSwimFreq", uSwimFreq);
 
 	// draw the salmon by calling up its display list:
   glPushMatrix();
@@ -877,6 +878,30 @@ Keyboard( unsigned char c, int x, int y )
 
 	switch( c )
 	{
+    case 'a':
+      if (uSwimAmp >= 0.1f) {
+        uSwimAmp -= 0.1f;
+      }
+      break;
+
+    case 'A':
+      if (uSwimAmp <= 2.f) {
+        uSwimAmp += 0.1f;
+      }
+      break;
+
+    case 'f':
+      if (uSwimFreq >= 0.1f) {
+        uSwimFreq -= 0.1f;
+      }
+      break;
+
+    case 'F':
+      if (uSwimFreq <= 5.f) {
+        uSwimFreq += 0.1f;
+      }
+      break;
+
 		case 'o':
 		case 'O':
 			NowProjection = ORTHO;
@@ -1020,6 +1045,8 @@ Reset( )
 	NowColor = YELLOW;
 	NowProjection = PERSP;
 	Xrot = Yrot = 0.;
+  uSwimAmp = 0.8f;
+  uSwimFreq = 3.f;
 }
 
 
