@@ -41,8 +41,6 @@ std::vector<int> MakePermutation() {
     return permutation;
 }
 
-const std::vector<int> Permutation = MakePermutation();
-
 // Get the constant vector based on permutation value
 Vector2 GetConstantVector(int v) {
     int h = v & 3;
@@ -63,7 +61,8 @@ double Lerp(double t, double a1, double a2) {
 }
 
 // 2D Perlin Noise function
-double Noise2D(double x, double y) {
+double Noise2D(double x, double y, const std::vector<int> Permutation) {
+
     int X = static_cast<int>(std::floor(x)) & 255;
     int Y = static_cast<int>(std::floor(y)) & 255;
 
@@ -94,11 +93,11 @@ double Noise2D(double x, double y) {
                 Lerp(v, dotBottomRight, dotTopRight));
 }
 
-double FractalBrownianMotion(double x, double y, double amplitude, double frequency, int numOctaves) {
+double FractalBrownianMotion(double x, double y, double amplitude, double frequency, int numOctaves, std::vector<int> Permutation) {
     double result = 0.0;
 
     for (int octave = 0; octave < numOctaves; ++octave) {
-        double n = amplitude * Noise2D(x * frequency, y * frequency);
+        double n = amplitude * Noise2D(x * frequency, y * frequency, Permutation);
         result += n;
 
         amplitude *= 0.5;   // Reduce amplitude
@@ -109,10 +108,12 @@ double FractalBrownianMotion(double x, double y, double amplitude, double freque
 }
 
 std::vector<std::vector<double> > GenerateFBMNoiseMap(int width, int height, double amplitude, double frequency, int numOctaves, double scale) {
+    const std::vector<int> Permutation = MakePermutation();
+
     std::vector<std::vector<double> > noiseMap(height, std::vector<double>(width));
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            double value = FractalBrownianMotion(x * scale, y * scale, amplitude, frequency, numOctaves);
+            double value = FractalBrownianMotion(x * scale, y * scale, amplitude, frequency, numOctaves, Permutation);
             noiseMap[y][x] = (value + 1.0) / 2.0; // Normalize to [0, 1]
         }
     }

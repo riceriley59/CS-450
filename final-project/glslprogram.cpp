@@ -462,7 +462,11 @@ GLSLProgram::Init( )
 {
 	Verbose = false;
 
+#ifndef __APPLE__
 	const GLubyte* extensions = glGetString(GL_EXTENSIONS);
+#else
+	const GLubyte* extensions = NULL;
+#endif
 	if( extensions != NULL )
 	{
 		//*********************************************************************************
@@ -626,9 +630,11 @@ GLSLProgram::SetAttributeVariable( char* name, int val )
 				glVertexAttrib1f( loc, (float)val );
 				break;
 
+#ifndef __APPLE__
 			case GL_DOUBLE:
 				glVertexAttrib1d( loc, (double)val );
 				break;
+#endif
 
 			default:
 				fprintf( stderr, "Setting attribute variable '%s': please be more explicit with the variable type\n", name );
@@ -704,15 +710,19 @@ GLSLProgram::SetAttributeVariable( char* name, double val )
 				glVertexAttrib1f( loc, (float)val );
 				break;
 
+#ifndef __APPLE__
 			case GL_DOUBLE:
 				glVertexAttrib1d( loc, val );
 				break;
+#endif
 
 			default:
 				fprintf( stderr, "Setting attribute variable '%s': please be more explicit with the variable type\n", name );
 		}
 #else
+#ifndef __APPLE__
 		glVertexAttrib1d( loc, val );
+#endif
 #endif
 	}
 };
@@ -793,9 +803,11 @@ GLSLProgram::SetUniformVariable( char* name, int val )
 				glUniform1f( loc, (float)val );
 				break;
 
+#ifndef __APPLE__
 			case GL_DOUBLE:
 				glUniform1d( loc, (double)val );
 				break;
+#endif
 
 			default:
 				fprintf( stderr, "Setting uniform variable '%s': please be more explicit with the variable type\n", name );
@@ -830,9 +842,11 @@ GLSLProgram::SetUniformVariable( char* name, float val )
 				glUniform1f( loc, val );
 				break;
 
+#ifndef __APPLE__
 			case GL_DOUBLE:
 				glUniform1d( loc, (double)val );
 				break;
+#endif
 
 			default:
 				fprintf( stderr, "Setting uniform variable '%s': please be more explicit with the variable type\n", name );
@@ -865,15 +879,19 @@ GLSLProgram::SetUniformVariable( char* name, double val )
 				glUniform1f( loc, (float)val );
 				break;
 
+#ifndef __APPLE__
 			case GL_DOUBLE:
 				glUniform1d( loc, val );
 				break;
+#endif
 
 			default:
 				fprintf( stderr, "Setting uniform variable '%s': please be more explicit with the variable type\n", name );
 		}
 #else
+#ifndef __APPLE__
 		glUniform1d( loc, val );
+#endif
 #endif
 	}
 };
@@ -1157,3 +1175,4 @@ main( )
 	return 0;
 }
 #endif
+

@@ -1,6 +1,8 @@
+#include "glslprogram.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <vector>
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -167,6 +169,9 @@ const float	WHITE[ ] = { 1.,1.,1.,1. };
 // for animation:
 
 const int MS_PER_CYCLE = 10000;		// 10000 milliseconds = 10 seconds
+                                  
+const int TERRAIN_WIDTH = 50;
+const int TERRAIN_HEIGHT = 50;
 
 
 // what options should we compile-in?
@@ -181,7 +186,7 @@ const int MS_PER_CYCLE = 10000;		// 10000 milliseconds = 10 seconds
 int		ActiveButton;			// current button that is down
 GLuint	AxesList;				// list to hold the axes
 int		AxesOn;					// != 0 means to draw the axes
-GLuint	TerrainList;				// object display list
+GLuint	TreeList;				// object display list
 int		DebugOn;				// != 0 means to print debugging info
 int		DepthCueOn;				// != 0 means to use intensity depth cueing
 int		DepthBufferOn;			// != 0 means to use the z-buffer
@@ -195,6 +200,7 @@ float	Time;					// used for animation, this has a value between 0. and 1.
 int		Xmouse, Ymouse;			// mouse values
 float	Xrot, Yrot;				// rotation angles in degrees
 
+std::vector<std::vector<double> > TerrainNoisemap, TreeNoisemap;
 
 // function prototypes:
 
@@ -279,10 +285,12 @@ MulArray3(float factor, float a, float b, float c )
 //#include "osucone.cpp"
 //#include "osutorus.cpp"
 //#include "bmptotexture.cpp"
-//#include "loadobjfile.cpp"
+#include "loadobjfile.cpp"
 //#include "keytime.cpp"
-//#include "glslprogram.cpp"
+#include "glslprogram.cpp"
 #include "perlin_noise.cpp"
+
+GLSLProgram Terrain, Tree;
 
 
 // main program:
@@ -448,8 +456,53 @@ Display( )
 
 
 	// draw the terrain by calling up its display list:
+  Terrain.Use();
+  glBegin(GL_TRIANGLES);
 
-	glCallList(TerrainList);
+    glColor3f(0.f, 1.f, 0.f);
+
+    // Generate vertices in a structured grid
+    for (int x = 0; x < TERRAIN_WIDTH - 1; ++x) {
+        for (int z = 0; z < TERRAIN_HEIGHT - 1; ++z) {
+            // Fetch height values
+            double h1 = TerrainNoisemap[z][x];
+            double h2 = TerrainNoisemap[z][x + 1];
+            double h3 = TerrainNoisemap[z + 1][x];
+            double h4 = TerrainNoisemap[z + 1][x + 1];
+
+            // Define two triangles for each quad
+            glVertex3f(x, h1, z);        // Bottom-left
+            glVertex3f(x + 1, h2, z);    // Bottom-right
+            glVertex3f(x, h3, z + 1);    // Top-left
+
+            glVertex3f(x + 1, h2, z);    // Bottom-right
+            glVertex3f(x + 1, h4, z + 1);// Top-right
+            glVertex3f(x, h3, z + 1);    // Top-left
+        }
+    }
+
+  glEnd();
+  Terrain.UnUse();
+  
+  // Generate vertices in a structured grid
+  Tree.Use();
+  for (int x = 0; x < TERRAIN_WIDTH - 1; ++x) {
+      for (int z = 0; z < TERRAIN_HEIGHT - 1; ++z) {
+            // Draw Tree
+            double terrainHeight = TerrainNoisemap[z][x]; // Get terrain height
+            double treeValue = TreeNoisemap[z][x];        // Get tree noise value
+
+            // Only place a tree if the terrain height is below the threshold
+            if (terrainHeight < 0.5 && treeValue > 0.3) {
+                glPushMatrix();
+                glTranslatef(x, terrainHeight, z); // Position tree
+                glScalef(0.03f, 0.03f, 0.03f);
+                glCallList(TreeList);             // Draw tree
+                glPopMatrix();
+            }
+      }
+  }
+  Tree.UnUse();
 
 	// draw some gratuitous text that just rotates on top of the scene:
 	// i commented out the actual text-drawing calls -- put them back in if you have a use for them
@@ -796,7 +849,35 @@ InitGraphics( )
 #endif
 
 	// all other setups go here, such as GLSLProgram and KeyTime setups:
+  Terrain.Init();
+  bool valid = Terrain.Create((char*) "terrain.vert", (char*) "terrain.frag");
+  if (!valid) {
+    fprintf(stderr, "The shader did not compile\n");
+  } else {
+    fprintf(stderr, "The shader compiled!\n");
+  }  
 
+  // Uniforms for fragment shader
+  Terrain.SetUniformVariable((char *) "uKa", 0.2f);
+  Terrain.SetUniformVariable((char *) "uKd", 0.4f);
+  Terrain.SetUniformVariable((char *) "uKs", 0.4f);
+  Terrain.SetUniformVariable((char *) "uShininess", 10.f);
+
+  Tree.Init();
+  valid = Tree.Create((char*) "tree.vert", (char*) "tree.frag");
+  if (!valid) {
+    fprintf(stderr, "The shader did not compile\n");
+  } else {
+    fprintf(stderr, "The shader compiled!\n");
+
+  // Uniforms for fragment shader
+  Tree.SetUniformVariable((char *) "uKa", 0.2f);
+  Tree.SetUniformVariable((char *) "uKd", 0.4f);
+  Tree.SetUniformVariable((char *) "uKs", 0.4f);
+  Tree.SetUniformVariable((char *) "uShininess", 10.f); }  
+
+  TerrainNoisemap = GenerateFBMNoiseMap(TERRAIN_WIDTH, TERRAIN_HEIGHT, 8.f, 0.1f, 3, 1.f);
+  TreeNoisemap = GenerateFBMNoiseMap(TERRAIN_WIDTH, TERRAIN_HEIGHT, 8.f, 0.1f, 3, 1.f);
 }
 
 
@@ -813,40 +894,9 @@ InitLists( )
 
 	glutSetWindow( MainWindow );
 
-  TerrainList = glGenLists(1);
-  glNewList(TerrainList, GL_COMPILE);
-    glBegin(GL_TRIANGLES);
-
-    glColor3f(0.f, 1.f, 0.f);
-
-    int width = 50;
-    int height = 50;
-    double amplitude = 8.0;
-    double frequency = 0.1;
-    double scale = 1; // Adjust scaling factor for height
-    std::vector<std::vector<double> > noisemap = GenerateFBMNoiseMap(width, height, amplitude, frequency, 3, 1.f);
-
-    // Generate vertices in a structured grid
-    for (int x = 0; x < width - 1; ++x) {
-        for (int z = 0; z < height - 1; ++z) {
-            // Fetch height values
-            double h1 = noisemap[z][x];
-            double h2 = noisemap[z][x + 1];
-            double h3 = noisemap[z + 1][x];
-            double h4 = noisemap[z + 1][x + 1];
-
-            // Define two triangles for each quad
-            glVertex3f(x, h1 * scale, z);        // Bottom-left
-            glVertex3f(x + 1, h2 * scale, z);    // Bottom-right
-            glVertex3f(x, h3 * scale, z + 1);    // Top-left
-
-            glVertex3f(x + 1, h2 * scale, z);    // Bottom-right
-            glVertex3f(x + 1, h4 * scale, z + 1);// Top-right
-            glVertex3f(x, h3 * scale, z + 1);    // Top-left
-        }
-    }
-
-    glEnd();
+  TreeList = glGenLists(1);
+  glNewList(TreeList, GL_COMPILE);
+    LoadObjFile((char*) "Lowpoly_tree_sample.obj");
   glEndList();
 
 	// create the axes:
@@ -885,6 +935,12 @@ Keyboard( unsigned char c, int x, int y )
 		case ESCAPE:
 			DoMainMenu( QUIT );	// will not return here
 			break;				// happy compiler
+
+    case 'n':
+    case 'N':
+      TerrainNoisemap = GenerateFBMNoiseMap(TERRAIN_WIDTH, TERRAIN_HEIGHT, 8.f, 0.1f, 3, 1.f);
+      TreeNoisemap = GenerateFBMNoiseMap(TERRAIN_WIDTH, TERRAIN_HEIGHT, 8.f, 0.1f, 3, 1.f);
+      break;
 
 		default:
 			fprintf( stderr, "Don't know what to do with keyboard hit: '%c' (0x%0x)\n", c, c );
